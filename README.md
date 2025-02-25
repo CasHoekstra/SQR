@@ -1,3 +1,45 @@
+# Symbolic Quantile Regression for Interpretable Quantile Predictions
+<hr style="border:2px solid gray">
+
+Symbolic Quantile Regression (SQR) for Interpretable Quantile Predictions is an adjusted framework of PySR developed by  <a href="https://github.com/MilesCranmer/PySR"> Cranmer </a> This framework is specifically tailored to do conditional quantile predictions on the SRBench dataset. 
+
+The framework utilizes Genetic Programming techniques to produce explainable mathematical equations that can be utilized to do quantile predictions in an interpretable manner, to be able to investigate target behavior at several different conditional quantiles. 
+
+
+# Installation Instructions for this Project
+
+## Requirements
+- Python 3.10.3 (recommended)
+- Julia 1.9+ (https://julialang.org/downloads/)
+
+## Installation
+
+1. **Create a virtual environment** (optional but recommended):
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # macOS/Linux
+   venv\Scripts\activate     # Windows
+   ```
+
+2. **Install Python dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Install Julia and configure Julia dependencies**:
+   Open a Julia terminal and execute:
+   ```julia
+   import Pkg
+   Pkg.add(["SymbolicRegression"])
+   ```
+
+
+## Troubleshooting
+If `pysr` causes issues, ensure that Julia is correctly installed and update the Julia packages:
+```julia
+import Pkg
+Pkg.update()
+```
 ### Full requirements.txt, also available in repo ###
 
 alembic==1.14.1
@@ -68,40 +110,3 @@ typing_extensions==4.12.2
 tzdata==2025.1
 urllib3==2.3.0
 wcwidth==0.2.13
-
-### README.md - Installation Instructions ###
-
-# Installation Instructions for this Project
-
-## Requirements
-- Python 3.10.3 (recommended)
-- Julia 1.9+ (https://julialang.org/downloads/)
-
-## Installation
-
-1. **Create a virtual environment** (optional but recommended):
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # macOS/Linux
-   venv\Scripts\activate     # Windows
-   ```
-
-2. **Install Python dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Install Julia and configure Julia dependencies**:
-   Open a Julia terminal and execute:
-   ```julia
-   import Pkg
-   Pkg.add(["SymbolicRegression"])
-   ```
-
-
-## Troubleshooting
-If `pysr` causes issues, ensure that Julia is correctly installed and update the Julia packages:
-```julia
-import Pkg
-Pkg.update()
-```
