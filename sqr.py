@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[12]:
+# In[19]:
 
 
 # Step 1: Import packages
@@ -21,12 +21,13 @@ from statsmodels.regression.quantile_regression import QuantReg
 import pmlb
 from pmlb import fetch_data, regression_dataset_names
 import random
+import pandas as pd
 
 # Step 2: Import pysr AFTER Julia dependencies are configured
 from pysr import PySRRegressor
 
 
-# In[13]:
+# In[20]:
 
 
 def get_feature_type(data_column):
@@ -123,10 +124,12 @@ def create_dummy_variables(X, categorical_features):
         return X_with_dummies
 
 
-# In[8]:
+# In[21]:
 
 
-regression_dataset_namestry = regression_dataset_names[2:3]   #remove [] for complete PMLB
+regression_dataset_namestry = regression_dataset_names
+regression_dataset_namestry = regression_dataset_names[2:3]
+
 print(regression_dataset_namestry)
 
 
@@ -303,7 +306,7 @@ for regression_dataset in regression_dataset_namestry:
 
             # Symbolic Quantile Regression
             modelq = PySRRegressor(
-                niterations=300, #imrpove for better results90
+                niterations=900, #imrpove for better results90
                 binary_operators=binary_operators,
                 unary_operators=unary_operators,
                 complexity_of_operators=complexity_of_operators,
@@ -608,7 +611,7 @@ for regression_dataset in regression_dataset_namestry:
 
             # Symbolic Quantile Regression
             modelq = PySRRegressor(
-                niterations=300, #imrpove for better results50
+                niterations=900, #imrpove for better results50
                 binary_operators=binary_operators,
                 unary_operators=unary_operators,
                 complexity_of_operators=complexity_of_operators,
@@ -738,4 +741,40 @@ for metric, comparisons in wilcoxon_results.items():
     for comparison, result in comparisons.items():
         significance = "Significant" if result['significant'] else "Not Significant"
         print(f"  {comparison}: Statistic: {result['statistic']}, p-value: {result['p_value']} ({significance})")
+
+
+# In[17]:
+
+
+# Merge both results into a dictionary with dataset labels
+all_results = {"results90": results90, "results50": results50}
+
+# Create a structured dictionary for easy merging
+data_list = []
+num_entries = len(next(iter(results90.values()))["losses"])  # Assume same number of entries for all models
+
+for dataset, results in all_results.items():
+    for i in range(num_entries):  # Iterate over the index of each loss/coverage/complexity entry
+        row = {"Dataset": dataset}
+        for model, metrics in results.items():
+            row[f"{model}Loss"] = float(metrics["losses"][i])
+            row[f"{model}Coverage"] = float(metrics["coverage"][i])
+            row[f"{model}Complexity"] = metrics.get("complexity", [None] * num_entries)[i]
+        data_list.append(row)
+
+# Convert list to DataFrame
+df = pd.DataFrame(data_list)
+
+# Save to CSV with correct decimal formatting
+df.to_csv("results.csv", index=False, sep=",", decimal=".")
+
+print("CSV file saved successfully.")
+
+
+# In[18]:
+
+
+with open("results.csv", "r", encoding="utf-8") as f:
+    for _ in range(10):  # Print first 5 lines
+        print(f.readline())
 
