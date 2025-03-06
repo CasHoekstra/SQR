@@ -18,12 +18,12 @@ source $HOME/.bashrc
 conda activate sqr
 
 # Simple trick to create a unique directory for each run of the script
-echo $$
-mkdir o`echo $$`
-cd o`echo $$`
+# echo $$
+# mkdir o`echo $$`
+# cd o`echo $$`
 
 # Run the actual experiment.
-python ~/sqr.py $SLURM_ARRAY_TASK_ID
+python ~/SQR/sqr.py $SLURM_ARRAY_TASK_ID
 mv *.json /var/scratch/fht800/sqr_results/
 
 #jupyter nbconvert --execute ~/hierarchical-conformal-prediction/models/dbpedia14/dbpedia14.ipynb
