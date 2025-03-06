@@ -38,8 +38,6 @@ for file in result_files:
         result = json.load(f)
     result_sets.append(result)
 
-print(result_sets)
-
 models = list(result_sets[0].keys())
 # Extract all available metrics dynamically
 available_metrics = set()
