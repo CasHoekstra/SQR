@@ -282,17 +282,21 @@ results90 = {
         "SQR": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
                 "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
                 "complexity": {ds_name: [] for ds_name in regression_dataset_namestry},
+                "tau": QUANTILE,
                 },
         "LightGBM": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
                      "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
+                     "tau": QUANTILE,
                      },
         "DecisionTree": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
                          "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
                          "complexity": {ds_name: [] for ds_name in regression_dataset_namestry},
+                         "tau": QUANTILE,
                          },
         "LinearQuantile": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
                            "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
                            "complexity": {ds_name: [] for ds_name in regression_dataset_namestry},
+                           "tau": QUANTILE,
                            }
 }
 
@@ -486,17 +490,21 @@ results50 = {
         "SQR": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
                 "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
                 "complexity": {ds_name: [] for ds_name in regression_dataset_namestry},
+                "tau": QUANTILE,
                 },
         "LightGBM": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
                      "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
+                     "tau": QUANTILE,
                      },
         "DecisionTree": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
                          "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
                          "complexity": {ds_name: [] for ds_name in regression_dataset_namestry},
+                         "tau": QUANTILE,
                          },
         "LinearQuantile": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
                            "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
                            "complexity": {ds_name: [] for ds_name in regression_dataset_namestry},
+                           "tau": QUANTILE,
                            }
 }
 
