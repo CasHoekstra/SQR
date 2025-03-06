@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=sqr
 #SBATCH --time=00:15:00
+#SBATCH --array=0-122
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=1
 #SBATCH --partition=defq
@@ -22,7 +23,8 @@ mkdir o`echo $$`
 cd o`echo $$`
 
 # Run the actual experiment.
-python ~/sqr.py
+python ~/sqr.py $SLURM_ARRAY_TASK_ID
+mv *.json /var/scratch/fht800/sqr_results/
 
 #jupyter nbconvert --execute ~/hierarchical-conformal-prediction/models/dbpedia14/dbpedia14.ipynb
 
