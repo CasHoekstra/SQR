@@ -29,7 +29,7 @@ import sys
 from pysr import PySRRegressor
 
 N_SPLITS = 5
-N_ITERS = 5
+N_ITERS = 900
 DATASET_ID = int(sys.argv[1])
 
 # In[20]:
