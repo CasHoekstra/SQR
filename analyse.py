@@ -98,10 +98,6 @@ for result_set in result_sets:
                         raise ValueError(f"Unknown tau: {metrics['tau']}")
                     target[model][metric].extend(scores)
 
-print(results50)
-print(results90)
-
-
 # Significance level for Bonferroni correction
 alpha = 0.05
 
@@ -136,7 +132,8 @@ for metric in metrics:
                     wilcoxon_results[metric][f"{model_1} vs {model_2}"] = {
                         'statistic': stat,
                         'p_value': p_value,
-                        'significant': p_value < corrected_alpha
+                        'significant': p_value < corrected_alpha,
+                        'corrected_alpha': corrected_alpha,
                     }
 
 # Display results
@@ -150,7 +147,7 @@ for metric, comparisons in wilcoxon_results.items():
     print(f"\nMetric  tau=.9: {metric}")
     for comparison, result in comparisons.items():
         significance = "Significant" if result['significant'] else "Not Significant"
-        print(f"  {comparison}: Statistic: {result['statistic']}, p-value: {result['p_value']} ({significance})")
+        print(f"  {comparison}: Statistic: {result['statistic']}, p-value: {result['p_value']}, corrected_alpha: {result['corrected_alpha']} ({significance})")
 
 
 
@@ -196,7 +193,8 @@ for metric in metrics:
                     wilcoxon_results[metric][f"{model_1} vs {model_2}"] = {
                         'statistic': stat,
                         'p_value': p_value,
-                        'significant': p_value < corrected_alpha
+                        'significant': p_value < corrected_alpha,
+                        'corrected_alpha': corrected_alpha,
                     }
 
 # Display results
@@ -205,13 +203,12 @@ for metric, result in friedman_results.items():
     significance = "Significant" if result['p_value'] < alpha else "Not Significant"
     print(f"Metric tau=0.5: {metric}, Statistic: {result['statistic']}, p-value: {result['p_value']} ({significance})")
 
-print("\nWilcoxon Test Results (All Comparisons) tau=0.5:")
+print(f"\nWilcoxon Test Results (All Comparisons) tau=0.5,:")
 for metric, comparisons in wilcoxon_results.items():
     print(f"\nMetric tau=0.5: {metric}")
     for comparison, result in comparisons.items():
         significance = "Significant" if result['significant'] else "Not Significant"
-        print(f"  {comparison}: Statistic: {result['statistic']}, p-value: {result['p_value']} ({significance})")
+        print(f"  {comparison}: Statistic: {result['statistic']}, p-value: {result['p_value']}, corrected_alpha: {result['corrected_alpha']} ({significance})")
 
 
 # In[17]:
-
