@@ -14,6 +14,16 @@ The framework utilizes Genetic Programming techniques to produce explainable mat
 
 ## Installation
 
+### Using anaconda (recommended)
+1. Install the Python package and environment manager [Anaconda](https://www.anaconda.com/docs/getting-started/anaconda/install).
+
+2. Install from the environment file
+    ```bash
+    conda env create -f conda_environment.yml
+    ```
+
+### Using pip
+
 1. **Create a virtual environment** (optional but recommended):
    ```bash
    python3 -m venv venv
