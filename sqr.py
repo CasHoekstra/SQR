@@ -333,6 +333,8 @@ for regression_dataset in regression_dataset_namestry:
                 complexity_of_operators=complexity_of_operators,
                 elementwise_loss="pinball_loss(y_true, y_pred) = max.(0.1 * (y_true - y_pred), (0.1 - 1) * (y_true - y_pred))", #DONT FORGET TO CHANGE WHEN CHANGING QUANTILE (JULIA SYNTAX)
                 temp_equation_file=True,
+                progress=False,
+                verbosity=0,
                 random_state=SEED
             )
 
