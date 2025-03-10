@@ -1,0 +1,54 @@
+Friedman Test Results tau=.9:
+Metric tau=.9: losses, Statistic: 725.7499564990425, p-value: 5.474318635526597e-157 (Significant)
+Metric tau=.9: coverage, Statistic: 395.6480758505292, p-value: 1.939992624922583e-85 (Significant)
+Metric tau=.9: complexity, Statistic: 248.4328888888895, p-value: 1.1310547192164443e-54 (Significant)
+
+Wilcoxon Test Results (All Comparisons) tau=0.9:
+
+Metric  tau=.9: losses
+  SQR vs LightGBM: Statistic: 11200.0, p-value: 3.639385939061027e-72, corrected_alpha: 0.008333333333333333 (Significant)
+  SQR vs DecisionTree: Statistic: 34119.0, p-value: 2.595033474348629e-34, corrected_alpha: 0.008333333333333333 (Significant)
+  SQR vs LinearQuantile: Statistic: 8731.0, p-value: 4.261164194487707e-77, corrected_alpha: 0.008333333333333333 (Significant)
+  LightGBM vs DecisionTree: Statistic: 21964.0, p-value: 5.854765259711298e-52, corrected_alpha: 0.008333333333333333 (Significant)
+  LightGBM vs LinearQuantile: Statistic: 19910.0, p-value: 4.278259482891659e-56, corrected_alpha: 0.008333333333333333 (Significant)
+  DecisionTree vs LinearQuantile: Statistic: 8070.0, p-value: 1.9101170006783202e-78, corrected_alpha: 0.008333333333333333 (Significant)
+
+Metric  tau=.9: coverage
+  SQR vs LightGBM: Statistic: 47147.0, p-value: 0.002184227636313763, corrected_alpha: 0.008333333333333333 (Significant)
+  SQR vs DecisionTree: Statistic: 45808.0, p-value: 5.130431103864558e-11, corrected_alpha: 0.008333333333333333 (Significant)
+  SQR vs LinearQuantile: Statistic: 10582.0, p-value: 3.144736883108536e-66, corrected_alpha: 0.008333333333333333 (Significant)
+  LightGBM vs DecisionTree: Statistic: 29002.5, p-value: 3.898861774943077e-25, corrected_alpha: 0.008333333333333333 (Significant)
+  LightGBM vs LinearQuantile: Statistic: 9586.5, p-value: 6.684334944443381e-69, corrected_alpha: 0.008333333333333333 (Significant)
+  DecisionTree vs LinearQuantile: Statistic: 14695.0, p-value: 4.013940906947992e-61, corrected_alpha: 0.008333333333333333 (Significant)
+
+Metric  tau=.9: complexity
+  SQR vs DecisionTree: Statistic: 11253.0, p-value: 4.4444878237163443e-69, corrected_alpha: 0.016666666666666666 (Significant)
+  SQR vs LinearQuantile: Statistic: 39536.5, p-value: 2.4037144331334267e-23, corrected_alpha: 0.016666666666666666 (Significant)
+  DecisionTree vs LinearQuantile: Statistic: 30847.5, p-value: 3.088449010351546e-36, corrected_alpha: 0.016666666666666666 (Significant)
+Friedman Test Results tau=0.5:
+Metric tau=0.5: losses, Statistic: 422.8768204948229, p-value: 2.4520851687890654e-91 (Significant)
+Metric tau=0.5: complexity, Statistic: 524.6411870503596, p-value: 1.1901829992008218e-114 (Significant)
+Metric tau=0.5: coverage, Statistic: 121.0571007552035, p-value: 4.5683972065296725e-26 (Significant)
+
+Wilcoxon Test Results (All Comparisons) tau=0.5,:
+
+Metric tau=0.5: losses
+  SQR vs LightGBM: Statistic: 28180.0, p-value: 1.1716529369690688e-41, corrected_alpha: 0.008333333333333333 (Significant)
+  SQR vs DecisionTree: Statistic: 38831.0, p-value: 4.800135532131225e-27, corrected_alpha: 0.008333333333333333 (Significant)
+  SQR vs LinearQuantile: Statistic: 11600.0, p-value: 2.20357395111312e-70, corrected_alpha: 0.008333333333333333 (Significant)
+  LightGBM vs DecisionTree: Statistic: 78190.0, p-value: 0.41921745756008577, corrected_alpha: 0.008333333333333333 (Not Significant)
+  LightGBM vs LinearQuantile: Statistic: 29918.0, p-value: 4.3172054633632923e-39, corrected_alpha: 0.008333333333333333 (Significant)
+  DecisionTree vs LinearQuantile: Statistic: 21592.0, p-value: 3.756291354975696e-52, corrected_alpha: 0.008333333333333333 (Significant)
+
+Metric tau=0.5: complexity
+  SQR vs DecisionTree: Statistic: 2670.0, p-value: 2.896645095556933e-86, corrected_alpha: 0.016666666666666666 (Significant)
+  SQR vs LinearQuantile: Statistic: 37034.5, p-value: 1.943372065398365e-23, corrected_alpha: 0.016666666666666666 (Significant)
+  DecisionTree vs LinearQuantile: Statistic: 9425.0, p-value: 5.709861981834971e-73, corrected_alpha: 0.016666666666666666 (Significant)
+
+Metric tau=0.5: coverage
+  SQR vs LightGBM: Statistic: 61291.0, p-value: 0.030901703933312194, corrected_alpha: 0.008333333333333333 (Not Significant)
+  SQR vs DecisionTree: Statistic: 61846.0, p-value: 0.003905279829162087, corrected_alpha: 0.008333333333333333 (Significant)
+  SQR vs LinearQuantile: Statistic: 40715.5, p-value: 6.683482947512941e-17, corrected_alpha: 0.008333333333333333 (Significant)
+  LightGBM vs DecisionTree: Statistic: 54974.0, p-value: 5.383558935865921e-06, corrected_alpha: 0.008333333333333333 (Significant)
+  LightGBM vs LinearQuantile: Statistic: 36047.5, p-value: 1.5060446907329156e-19, corrected_alpha: 0.008333333333333333 (Significant)
+  DecisionTree vs LinearQuantile: Statistic: 37255.5, p-value: 9.850738514568802e-22, corrected_alpha: 0.008333333333333333 (Significant)

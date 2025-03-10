@@ -14,6 +14,16 @@ The framework utilizes Genetic Programming techniques to produce explainable mat
 
 ## Installation
 
+### Using anaconda (recommended)
+1. Install the Python package and environment manager [Anaconda](https://www.anaconda.com/docs/getting-started/anaconda/install).
+
+2. Install from the environment file
+    ```bash
+    conda env create -f conda_environment.yml
+    ```
+
+### Using pip
+
 1. **Create a virtual environment** (optional but recommended):
    ```bash
    python3 -m venv venv
@@ -33,6 +43,28 @@ The framework utilizes Genetic Programming techniques to produce explainable mat
    Pkg.add(["SymbolicRegression"])
    ```
 
+# Running the experiments
+
+## Generating results
+Run an experiment as follows:
+```bash
+python sqr.py 0
+```
+where ``0`` denotes the dataset to run the benchmark on.
+To run all experiments, use a bash loop:
+```bash
+for i in $(seq 0 122)
+do 
+    python sqr.py $i
+done
+```
+
+## Analysing results
+To run the analysis script on a set of ``.json`` files with results run:
+```bash
+python analyse.py /path/to/result/files/*.json
+```
+
 
 ## Troubleshooting
 If `pysr` causes issues, ensure that Julia is correctly installed and update the Julia packages:
@@ -41,7 +73,7 @@ import Pkg
 Pkg.update()
 ```
 ### Full requirements.txt, also available in repo ###
-
+```
 alembic==1.14.1
 appnope==0.1.4
 asttokens==3.0.0
@@ -110,3 +142,4 @@ typing_extensions==4.12.2
 tzdata==2025.1
 urllib3==2.3.0
 wcwidth==0.2.13
+```
