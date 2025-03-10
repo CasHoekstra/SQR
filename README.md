@@ -43,6 +43,28 @@ The framework utilizes Genetic Programming techniques to produce explainable mat
    Pkg.add(["SymbolicRegression"])
    ```
 
+# Running the experiments
+
+## Generating results
+Run an experiment as follows:
+```bash
+python sqr.py 0
+```
+where ``0`` denotes the dataset to run the benchmark on.
+To run all experiments, use a bash loop:
+```bash
+for i in $(seq 0 122)
+do 
+    python sqr.py $i
+done
+```
+
+## Analysing results
+To run the analysis script on a set of ``.json`` files with results run:
+```bash
+python analyse.py /path/to/result/files/*.json
+```
+
 
 ## Troubleshooting
 If `pysr` causes issues, ensure that Julia is correctly installed and update the Julia packages:
