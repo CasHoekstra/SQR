@@ -73,7 +73,7 @@ import Pkg
 Pkg.update()
 ```
 ### Full requirements.txt, also available in repo ###
-
+```
 alembic==1.14.1
 appnope==0.1.4
 asttokens==3.0.0
@@ -142,3 +142,4 @@ typing_extensions==4.12.2
 tzdata==2025.1
 urllib3==2.3.0
 wcwidth==0.2.13
+```
