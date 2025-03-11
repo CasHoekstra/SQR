@@ -60,11 +60,15 @@ done
 ```
 
 ## Analysing results
-To run the analysis script on a set of ``.json`` files with results run:
+To run the analysis script on a set of ``.json`` files with results and test for statistical significance, run:
 ```bash
 python analyse.py /path/to/result/files/*.json
 ```
 
+To obtain per-dataset raw results run:
+```bash
+python analyse_ds.py /path/to/result_file.json
+```
 
 ## Troubleshooting
 If `pysr` causes issues, ensure that Julia is correctly installed and update the Julia packages:
