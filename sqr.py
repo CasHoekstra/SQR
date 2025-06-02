@@ -227,6 +227,7 @@ def objective_lgb(trial, train_X, train_y, val_X, val_y, tau):
         'bagging_seed': SEED,
         'feature_fraction_seed': SEED,
         'data_random_seed': SEED,
+        'verbose': -1,
     }
 
     if params['min_child_samples'] >= params['num_leaves']:
