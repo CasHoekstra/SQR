@@ -356,22 +356,23 @@ for regression_dataset in regression_dataset_namestry:
         for train_index, test_index in kf.split(X):
             train_X, test_X = X[train_index], X[test_index]
             train_y, test_y = y[train_index], y[test_index]
-            train_min, train_max = np.min(train_y), np.max(train_y)
-            y_range_train = train_max - train_min
-            parsimony = (0.01 * y_range_train) / 5
 
-            # Symbolic Quantile Regression
+            params_sqr = {
+                "niterations": N_ITERS,  # improve for better results50
+                "binary_operators": binary_operators,
+                "unary_operators": unary_operators,
+                "complexity_of_operators": complexity_of_operators,
+                "elementwise_loss": f"QuantileLoss({QUANTILE})",
+                "deterministic": True,
+                "parallelism": "serial",
+                "temp_equation_file": True,
+                "parsimony": 0.0,
+                "random_state": SEED,
+                "progress": False,
+                "verbosity": 0,
+            }
             modelq = PySRRegressor(
-                niterations=N_ITERS, #imrpove for better results90
-                binary_operators=binary_operators,
-                unary_operators=unary_operators,
-                complexity_of_operators=complexity_of_operators,
-                elementwise_loss=f"QuantileLoss({QUANTILE})",
-                temp_equation_file=True,
-                progress=False,
-                verbosity=0,
-                parsimony=parsimony,
-                random_state=SEED
+                **params_sqr
             )
             t1 = time.time()
             modelq.fit(train_X, train_y)
@@ -610,6 +611,8 @@ for regression_dataset in regression_dataset_namestry:
                 "temp_equation_file": True,
                 "parsimony": 0.0,
                 "random_state": SEED,
+                "progress": False,
+                "verbosity": 0,
             }
             modelq = PySRRegressor(
                 **params_sqr
@@ -789,6 +792,8 @@ for regression_dataset in regression_dataset_namestry:
                 "parallelism": "serial",
                 "temp_equation_file": True,
                 "parsimony": 0.0,
+                "progress": False,
+                "verbosity": 0,
                 "random_state": SEED,
             }
             modelq = PySRRegressor(
