@@ -11,6 +11,7 @@ import sympy as sp
 import torch
 import lightgbm as lgb
 import optuna
+import copy
 from sklearn.model_selection import train_test_split, KFold
 from sklearn.metrics import mean_pinball_loss
 from sklearn.tree import DecisionTreeRegressor
@@ -24,6 +25,7 @@ import random
 import pandas as pd
 import json
 import sys
+import time
 
 # Step 2: Import pysr AFTER Julia dependencies are configured
 from pysr import PySRRegressor
@@ -163,20 +165,23 @@ optuna_seed = SEED
 QUANTILE = 0.9 #(CHANGE PYSR QUANTILE MANUALLY)
 
 # Function to calculate pinball loss
-def pinball_loss(y_true, y_pred, tau=QUANTILE):
+def pinball_loss(y_true, y_pred, tau):
     residuals = y_true - y_pred
-    loss = np.where(residuals >= 0, tau * residuals, (1 - tau) * -residuals)
+    # loss = np.where(residuals >= 0, tau * residuals, (1 - tau) * -residuals)
+    loss = np.maximum(tau * residuals, (tau - 1) * residuals)
     return np.mean(loss)
 
 # Function to calculate normalized pinball loss using the global dataset range
-def normalized_pinball_loss(y_true, y_pred, global_min, global_max, tau=QUANTILE):
+def normalized_pinball_loss(y_true, y_pred, global_min, global_max, tau):
     range_y = global_max - global_min
     loss = pinball_loss(y_true, y_pred, tau)
-    return loss / range_y if range_y != 0 else 0  # Avoid division by zero
+    if range_y == 0:   # Avoid division by zero
+        raise ValueError('Y range is 0!')
+    return loss / range_y
 
 # Function to calculate absolute coverage error
-def absolute_coverage_error(y_true, y_pred, tau=QUANTILE):
-    coverage = np.mean(y_pred >= y_true)
+def absolute_coverage_error(y_true, y_pred, tau):
+    coverage = np.mean(y_true <= y_pred)
     return np.abs(coverage - tau)
 
 # Function to calculate expression complexity
@@ -196,8 +201,21 @@ def calculate_expression_complexity(expression, complexity_of_operators):
             complexity += complexity_of_operators[atom]
     return complexity
 
+
+def objective_sqr(trial, train_X, train_y, val_X, val_y, params, tau):
+    params = copy.deepcopy(params)
+    params.update({
+        'parsimony': trial.suggest_float('parsimony', 0.0, 0.0),   
+    })
+    modelq = PySRRegressor(
+        **params
+    )
+    modelq.fit(train_X, train_y)
+    y_pred = modelq.predict(val_X)
+    return pinball_loss(val_y, y_pred, tau)
+
 # LightGBM objective function for Optuna
-def objective_lgb(trial, train_X, train_y, val_X, val_y):
+def objective_lgb(trial, train_X, train_y, val_X, val_y, tau):
     params = {
         'objective': 'quantile',
         'alpha': QUANTILE,
@@ -217,10 +235,10 @@ def objective_lgb(trial, train_X, train_y, val_X, val_y):
     model = lgb.LGBMRegressor(**params)
     model.fit(train_X, train_y)
     y_pred = model.predict(val_X)
-    return pinball_loss(val_y, y_pred, tau=QUANTILE)
+    return pinball_loss(val_y, y_pred, tau=tau)
 
 # Quantile regression objective function for Optuna
-def objective_linear(trial, train_X, train_y, val_X, val_y, tau=QUANTILE):
+def objective_linear(trial, train_X, train_y, val_X, val_y, tau):
     max_iter = trial.suggest_int('max_iter', 1000, 5000)
     model = QuantReg(train_y, train_X)
     results = model.fit(q=tau, max_iter=max_iter)
@@ -252,14 +270,14 @@ class QuantileDecisionTreeRegressor:
         return predictions
 
 # Optuna Objective Function for Decision Tree
-def objective_tree(trial, train_X, train_y, val_X, val_y):
+def objective_tree(trial, train_X, train_y, val_X, val_y, tau):
     min_samples_leaf = trial.suggest_int('min_samples_leaf', 2, 50)
 
-    model = QuantileDecisionTreeRegressor(quantile=QUANTILE, min_samples_leaf=min_samples_leaf)
+    model = QuantileDecisionTreeRegressor(quantile=tau, min_samples_leaf=min_samples_leaf)
     model.fit(train_X, train_y)
     y_pred = model.predict(val_X)
 
-    return pinball_loss(val_y, y_pred, tau=QUANTILE)
+    return pinball_loss(val_y, y_pred, tau=tau)
 
 # Complexity parameters
 binary_operators = ["+", "*", "/", "-"]
@@ -277,25 +295,37 @@ complexity_of_operators = {
 }
 
 # results90 storage
-regression_dataset_namestry
+# regression_dataset_namestry
 results90 = {
         "SQR": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
                 "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
                 "complexity": {ds_name: [] for ds_name in regression_dataset_namestry},
+                "time_all": {ds_name: [] for ds_name in regression_dataset_namestry},
+                "time_fit": {ds_name: [] for ds_name in regression_dataset_namestry},
+                "sizes": {ds_name: [] for ds_name in regression_dataset_namestry},
                 "tau": QUANTILE,
                 },
         "LightGBM": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
                      "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
+                     "time_all": {ds_name: [] for ds_name in regression_dataset_namestry},
+                     "time_fit": {ds_name: [] for ds_name in regression_dataset_namestry},
+                     "sizes": {ds_name: [] for ds_name in regression_dataset_namestry},
                      "tau": QUANTILE,
                      },
         "DecisionTree": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
                          "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
                          "complexity": {ds_name: [] for ds_name in regression_dataset_namestry},
+                         "time_all": {ds_name: [] for ds_name in regression_dataset_namestry},
+                         "time_fit": {ds_name: [] for ds_name in regression_dataset_namestry},
+                         "sizes": {ds_name: [] for ds_name in regression_dataset_namestry},
                          "tau": QUANTILE,
                          },
         "LinearQuantile": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
                            "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
                            "complexity": {ds_name: [] for ds_name in regression_dataset_namestry},
+                           "time_all": {ds_name: [] for ds_name in regression_dataset_namestry},
+                           "time_fit": {ds_name: [] for ds_name in regression_dataset_namestry},
+                           "sizes": {ds_name: [] for ds_name in regression_dataset_namestry},
                            "tau": QUANTILE,
                            }
 }
@@ -303,6 +333,8 @@ results90 = {
 def process_fold_scores(model_name, ds_name, fold_scores, resultsdict):
     for metric, scores in fold_scores.items():
         resultsdict[model_name][metric][ds_name].extend(scores)
+
+
 
 
 # Iterate over datasets
@@ -316,14 +348,17 @@ for regression_dataset in regression_dataset_namestry:
 
         kf = KFold(n_splits=N_SPLITS, shuffle=True, random_state=SEED)
 
-        fold_scores_sqr = {"losses": [], "coverage": [], "complexity": []}
-        fold_scores_lgb = {"losses": [], "coverage": []}
-        fold_scores_tree = {"losses": [], "coverage": [], "complexity": []}
-        fold_scores_linear = {"losses": [], "coverage": [], "complexity": []}
+        fold_scores_sqr = {"losses": [], "coverage": [], "complexity": [], 'time_all': [], 'time_fit': []}
+        fold_scores_lgb = {"losses": [], "coverage": [], 'time_all': [], 'time_fit': []}
+        fold_scores_tree = {"losses": [], "coverage": [], "complexity": [], 'time_all': [], 'time_fit': []}
+        fold_scores_linear = {"losses": [], "coverage": [], "complexity": [], 'time_all': [], 'time_fit': []}
 
         for train_index, test_index in kf.split(X):
             train_X, test_X = X[train_index], X[test_index]
             train_y, test_y = y[train_index], y[test_index]
+            train_min, train_max = np.min(train_y), np.max(train_y)
+            y_range_train = train_max - train_min
+            parsimony = (0.01 * y_range_train) / 5
 
             # Symbolic Quantile Regression
             modelq = PySRRegressor(
@@ -331,63 +366,83 @@ for regression_dataset in regression_dataset_namestry:
                 binary_operators=binary_operators,
                 unary_operators=unary_operators,
                 complexity_of_operators=complexity_of_operators,
-                elementwise_loss="pinball_loss(y_true, y_pred) = max.(0.1 * (y_true - y_pred), (0.1 - 1) * (y_true - y_pred))", #DONT FORGET TO CHANGE WHEN CHANGING QUANTILE (JULIA SYNTAX)
+                elementwise_loss=f"QuantileLoss({QUANTILE})",
                 temp_equation_file=True,
                 progress=False,
                 verbosity=0,
+                parsimony=parsimony,
                 random_state=SEED
             )
-
+            t1 = time.time()
             modelq.fit(train_X, train_y)
+            t2 = time.time()
             y_pred_symbolic = modelq.predict(test_X)
 
             # Metrics for SQR
-            fold_scores_sqr["losses"].append(normalized_pinball_loss(test_y, y_pred_symbolic, global_min, global_max))
-            fold_scores_sqr["coverage"].append(absolute_coverage_error(test_y, y_pred_symbolic))
+            fold_scores_sqr["losses"].append(normalized_pinball_loss(test_y, y_pred_symbolic, global_min, global_max, tau=QUANTILE))
+            fold_scores_sqr["coverage"].append(absolute_coverage_error(test_y, y_pred_symbolic, tau=QUANTILE))
             fold_scores_sqr["complexity"].append(calculate_expression_complexity(modelq.sympy(), complexity_of_operators))
+            fold_scores_sqr['time_all'].append(t2-t1)
+            fold_scores_sqr['time_fit'].append(t2-t1)
 
             # LightGBM Quantile Regression
+            t1 = time.time()
             study_lgb = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(seed=SEED))
-            study_lgb.optimize(lambda trial: objective_lgb(trial, train_X, train_y, test_X, test_y), n_trials=10)
+            study_lgb.optimize(lambda trial: objective_lgb(trial, train_X, train_y, test_X, test_y, tau=QUANTILE), n_trials=10)
 
             best_params_lgb = study_lgb.best_params
             model_lgb = lgb.LGBMRegressor(objective='quantile', alpha=QUANTILE, **best_params_lgb)
+            t2 = time.time()
             model_lgb.fit(train_X, train_y)
+            t3 = time.time()
             y_pred_lgb = model_lgb.predict(test_X)
 
             # Metrics for LightGBM
-            fold_scores_lgb["losses"].append(normalized_pinball_loss(test_y, y_pred_lgb, global_min, global_max))
-            fold_scores_lgb["coverage"].append(absolute_coverage_error(test_y, y_pred_lgb))
+            fold_scores_lgb["losses"].append(normalized_pinball_loss(test_y, y_pred_lgb, global_min, global_max, tau=QUANTILE))
+            fold_scores_lgb["coverage"].append(absolute_coverage_error(test_y, y_pred_lgb, tau=QUANTILE))
+            fold_scores_lgb['time_all'].append(t3-t1)
+            fold_scores_lgb['time_fit'].append(t3-t2)
 
             # Inside the main loop for dataset processing (NEW)
+            t1 = time.time()
             study_tree = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(seed=SEED))
-            study_tree.optimize(lambda trial: objective_tree(trial, train_X, train_y, test_X, test_y), n_trials=10)
+            study_tree.optimize(lambda trial: objective_tree(trial, train_X, train_y, test_X, test_y, tau=QUANTILE), n_trials=10)
 
             best_params_tree = study_tree.best_params  # Get best hyperparameter
 
             # Train the best Decision Tree model with optimized min_samples_leaf
             model_tree = QuantileDecisionTreeRegressor(quantile=QUANTILE, min_samples_leaf=best_params_tree['min_samples_leaf'])
+            t2 = time.time()
             model_tree.fit(train_X, train_y)
+            t3 = time.time()
             y_pred_tree = model_tree.predict(test_X)
 
             # Metrics for Decision Tree (NEW complexity calculation)
-            fold_scores_tree["losses"].append(normalized_pinball_loss(test_y, y_pred_tree, global_min, global_max))
-            fold_scores_tree["coverage"].append(absolute_coverage_error(test_y, y_pred_tree))
+            fold_scores_tree["losses"].append(normalized_pinball_loss(test_y, y_pred_tree, global_min, global_max, tau=QUANTILE))
+            fold_scores_tree["coverage"].append(absolute_coverage_error(test_y, y_pred_tree, tau=QUANTILE))
             fold_scores_tree["complexity"].append(model_tree.tree.tree_.node_count)  # NEW: Store tree complexity
+            fold_scores_tree['time_all'].append(max(t3-t1, 0.0))
+            fold_scores_tree['time_fit'].append(max(t3-t2, 0.0))
 
             # Linear Quantile Regression
+            t1 = time.time()
             study_linear = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(seed=SEED))
-            study_linear.optimize(lambda trial: objective_linear(trial, train_X, train_y, test_X, test_y), n_trials=10)
+            
+            study_linear.optimize(lambda trial: objective_linear(trial, train_X, train_y, test_X, test_y, tau=QUANTILE), n_trials=10)
 
             best_params_linear = study_linear.best_params
+            t2 = time.time()
             model_linear = QuantReg(train_y, train_X).fit(q=QUANTILE, max_iter=best_params_linear['max_iter'])
+            t3 = time.time()
             y_pred_linear = model_linear.predict(test_X)
 
             # Metrics for Linear Quantile Regression
-            fold_scores_linear["losses"].append(normalized_pinball_loss(test_y, y_pred_linear, global_min, global_max))
-            fold_scores_linear["coverage"].append(absolute_coverage_error(test_y, y_pred_linear))
+            fold_scores_linear["losses"].append(normalized_pinball_loss(test_y, y_pred_linear, global_min, global_max, tau=QUANTILE))
+            fold_scores_linear["coverage"].append(absolute_coverage_error(test_y, y_pred_linear, tau=QUANTILE))
             fold_scores_linear["complexity"].append(X.shape[1])
-
+            fold_scores_linear['time_all'].append(t3-t1)
+            fold_scores_linear['time_fit'].append(t3-t2)
+                
         process_fold_scores("SQR", regression_dataset, fold_scores_sqr, results90)
         process_fold_scores("LightGBM", regression_dataset, fold_scores_lgb, results90)
         process_fold_scores("DecisionTree", regression_dataset, fold_scores_tree, results90)
@@ -492,25 +547,37 @@ results50 = {
         "SQR": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
                 "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
                 "complexity": {ds_name: [] for ds_name in regression_dataset_namestry},
+                "time_all": {ds_name: [] for ds_name in regression_dataset_namestry},
+                "time_fit": {ds_name: [] for ds_name in regression_dataset_namestry},
+                "sizes": {ds_name: [] for ds_name in regression_dataset_namestry},
                 "tau": QUANTILE,
                 },
         "LightGBM": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
                      "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
+                     "time_all": {ds_name: [] for ds_name in regression_dataset_namestry},
+                     "time_fit": {ds_name: [] for ds_name in regression_dataset_namestry},
+                     "sizes": {ds_name: [] for ds_name in regression_dataset_namestry},
                      "tau": QUANTILE,
                      },
         "DecisionTree": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
                          "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
                          "complexity": {ds_name: [] for ds_name in regression_dataset_namestry},
+                         "time_all": {ds_name: [] for ds_name in regression_dataset_namestry},
+                         "time_fit": {ds_name: [] for ds_name in regression_dataset_namestry},
+                         "sizes": {ds_name: [] for ds_name in regression_dataset_namestry},
                          "tau": QUANTILE,
                          },
         "LinearQuantile": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
                            "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
                            "complexity": {ds_name: [] for ds_name in regression_dataset_namestry},
+                           "time_all": {ds_name: [] for ds_name in regression_dataset_namestry},
+                           "time_fit": {ds_name: [] for ds_name in regression_dataset_namestry},
+                           "sizes": {ds_name: [] for ds_name in regression_dataset_namestry},
                            "tau": QUANTILE,
                            }
 }
 
-# Iterate over datasets
+# # Iterate over datasets
 for regression_dataset in regression_dataset_namestry:
     try:
         print(regression_dataset)
@@ -521,75 +588,105 @@ for regression_dataset in regression_dataset_namestry:
 
         kf = KFold(n_splits=N_SPLITS, shuffle=True, random_state=SEED)
 
-        fold_scores_sqr = {"losses": [], "coverage": [], "complexity": []}
-        fold_scores_lgb = {"losses": [], "coverage": []}
-        fold_scores_tree = {"losses": [], "coverage": [], "complexity": []}
-        fold_scores_linear = {"losses": [], "coverage": [], "complexity": []}
+        fold_scores_sqr = {"losses": [], "coverage": [], "complexity": [], 'time_all': [], 'time_fit': []}
+        fold_scores_lgb = {"losses": [], "coverage": [], 'time_all': [], 'time_fit': []}
+        fold_scores_tree = {"losses": [], "coverage": [], "complexity": [], 'time_all': [], 'time_fit': []}
+        fold_scores_linear = {"losses": [], "coverage": [], "complexity": [], 'time_all': [], 'time_fit': []}
 
         for train_index, test_index in kf.split(X):
             train_X, test_X = X[train_index], X[test_index]
             train_y, test_y = y[train_index], y[test_index]
-
-            # Symbolic Quantile Regression
+            
+            
+            study_sqr = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(seed=SEED))
+            params_sqr = {
+                "niterations": N_ITERS,  # improve for better results50
+                "binary_operators": binary_operators,
+                "unary_operators": unary_operators,
+                "complexity_of_operators": complexity_of_operators,
+                "elementwise_loss": f"QuantileLoss({QUANTILE})",
+                "deterministic": True,
+                "parallelism": "serial",
+                "temp_equation_file": True,
+                "parsimony": 0.0,
+                "random_state": SEED,
+            }
             modelq = PySRRegressor(
-                niterations=N_ITERS, #imrpove for better results50
-                binary_operators=binary_operators,
-                unary_operators=unary_operators,
-                complexity_of_operators=complexity_of_operators,
-                elementwise_loss="pinball_loss(y_true, y_pred) = max.(0.5 * (y_true - y_pred), (0.5 - 1) * (y_true - y_pred))", #DONT FORGET TO CHANGE WHEN CHANGING QUANTILE (JULIA SYNTAX)
-                temp_equation_file=True,
-                random_state=SEED
+                **params_sqr
             )
-
+            
+            t1 = time.time()
             modelq.fit(train_X, train_y)
+            t2 = time.time()
+
             y_pred_symbolic = modelq.predict(test_X)
 
             # Metrics for SQR
-            fold_scores_sqr["losses"].append(normalized_pinball_loss(test_y, y_pred_symbolic, global_min, global_max))
-            fold_scores_sqr["coverage"].append(absolute_coverage_error(test_y, y_pred_symbolic))
+            fold_scores_sqr["losses"].append(normalized_pinball_loss(test_y, y_pred_symbolic, global_min, global_max, tau=QUANTILE))
+            fold_scores_sqr["coverage"].append(absolute_coverage_error(test_y, y_pred_symbolic, tau=QUANTILE))
             fold_scores_sqr["complexity"].append(calculate_expression_complexity(modelq.sympy(), complexity_of_operators))
+            fold_scores_sqr['time_all'].append(t2-t1)
+            fold_scores_sqr['time_fit'].append(t2-t1)
 
             # LightGBM Quantile Regression
+            t1 = time.time()
             study_lgb = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(seed=SEED))
-            study_lgb.optimize(lambda trial: objective_lgb(trial, train_X, train_y, test_X, test_y), n_trials=10)
+        
+            study_lgb.optimize(lambda trial: objective_lgb(trial, train_X, train_y, test_X, test_y, tau=QUANTILE), n_trials=10)
 
             best_params_lgb = study_lgb.best_params
             model_lgb = lgb.LGBMRegressor(objective='quantile', alpha=QUANTILE, **best_params_lgb)
+            t2 = time.time()
             model_lgb.fit(train_X, train_y)
+            t3 = time.time()
             y_pred_lgb = model_lgb.predict(test_X)
 
             # Metrics for LightGBM
-            fold_scores_lgb["losses"].append(normalized_pinball_loss(test_y, y_pred_lgb, global_min, global_max))
-            fold_scores_lgb["coverage"].append(absolute_coverage_error(test_y, y_pred_lgb))
+            fold_scores_lgb["losses"].append(normalized_pinball_loss(test_y, y_pred_lgb, global_min, global_max, tau=QUANTILE))
+            fold_scores_lgb["coverage"].append(absolute_coverage_error(test_y, y_pred_lgb, tau=QUANTILE))
+            fold_scores_lgb['time_all'].append(t3-t1)
+            fold_scores_lgb['time_fit'].append(t3-t2)
 
             # Inside the main loop for dataset processing (NEW)
+            t1 = time.time()
             study_tree = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(seed=SEED))
-            study_tree.optimize(lambda trial: objective_tree(trial, train_X, train_y, test_X, test_y), n_trials=10)
+            
+            study_tree.optimize(lambda trial: objective_tree(trial, train_X, train_y, test_X, test_y, tau=QUANTILE), n_trials=10)
 
             best_params_tree = study_tree.best_params  # Get best hyperparameter
 
             # Train the best Decision Tree model with optimized min_samples_leaf
             model_tree = QuantileDecisionTreeRegressor(quantile=QUANTILE, min_samples_leaf=best_params_tree['min_samples_leaf'])
+            t2 = time.time()
             model_tree.fit(train_X, train_y)
+            t3 = time.time()
             y_pred_tree = model_tree.predict(test_X)
 
             # Metrics for Decision Tree (NEW complexity calculation)
-            fold_scores_tree["losses"].append(normalized_pinball_loss(test_y, y_pred_tree, global_min, global_max))
-            fold_scores_tree["coverage"].append(absolute_coverage_error(test_y, y_pred_tree))
+            fold_scores_tree["losses"].append(normalized_pinball_loss(test_y, y_pred_tree, global_min, global_max, tau=QUANTILE))
+            fold_scores_tree["coverage"].append(absolute_coverage_error(test_y, y_pred_tree, tau=QUANTILE))
             fold_scores_tree["complexity"].append(model_tree.tree.tree_.node_count)  # NEW: Store tree complexity
+            fold_scores_tree['time_all'].append(max(t3-t1, 0.0))
+            fold_scores_tree['time_fit'].append(max(t3-t2, 0.0))
 
             # Linear Quantile Regression
+            t1 = time.time()
             study_linear = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(seed=SEED))
-            study_linear.optimize(lambda trial: objective_linear(trial, train_X, train_y, test_X, test_y), n_trials=10)
+            
+            study_linear.optimize(lambda trial: objective_linear(trial, train_X, train_y, test_X, test_y, tau=QUANTILE), n_trials=10)
 
             best_params_linear = study_linear.best_params
+            t2 = time.time()
             model_linear = QuantReg(train_y, train_X).fit(q=QUANTILE, max_iter=best_params_linear['max_iter'])
+            t3 = time.time()
             y_pred_linear = model_linear.predict(test_X)
 
             # Metrics for Linear Quantile Regression
-            fold_scores_linear["losses"].append(normalized_pinball_loss(test_y, y_pred_linear, global_min, global_max))
-            fold_scores_linear["coverage"].append(absolute_coverage_error(test_y, y_pred_linear))
+            fold_scores_linear["losses"].append(normalized_pinball_loss(test_y, y_pred_linear, global_min, global_max, tau=QUANTILE))
+            fold_scores_linear["coverage"].append(absolute_coverage_error(test_y, y_pred_linear, tau=QUANTILE))
             fold_scores_linear["complexity"].append(X.shape[1])
+            fold_scores_linear['time_all'].append(t3-t1)
+            fold_scores_linear['time_fit'].append(t3-t2)
 
         process_fold_scores("SQR", regression_dataset, fold_scores_sqr, results50)
         process_fold_scores("LightGBM", regression_dataset, fold_scores_lgb, results50)
@@ -604,6 +701,185 @@ print(results50)
 with open(f"results50_{regression_dataset_namestry[0]}.json", 'w+') as f:
     json.dump(results50, f)
 
+
+
+# Set seed for reproducibility
+SEED = 42  # Change as needed
+
+# Set NumPy seed
+np.random.seed(SEED)
+
+# Set Python random seed
+random.seed(SEED)
+
+# Set PyTorch seed (if using)
+torch.manual_seed(SEED)
+
+# Set Optuna seed
+optuna.logging.set_verbosity(optuna.logging.WARNING)  # Reduce logging clutter
+optuna_seed = SEED
+
+# Global quantile setting (EXCEPT FOR PYSR, THIS NEEDS MANUAL ADJUSTMENT)
+QUANTILE = 0.7 #(CHANGE PYSR QUANTILE MANUALLY)
+
+# results50 storage
+results70 = {
+        "SQR": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
+                "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
+                "complexity": {ds_name: [] for ds_name in regression_dataset_namestry},
+                "time_all": {ds_name: [] for ds_name in regression_dataset_namestry},
+                "time_fit": {ds_name: [] for ds_name in regression_dataset_namestry},
+                "sizes": {ds_name: [] for ds_name in regression_dataset_namestry},
+                "tau": QUANTILE,
+                },
+        "LightGBM": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
+                     "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
+                     "time_all": {ds_name: [] for ds_name in regression_dataset_namestry},
+                     "time_fit": {ds_name: [] for ds_name in regression_dataset_namestry},
+                     "sizes": {ds_name: [] for ds_name in regression_dataset_namestry},
+                     "tau": QUANTILE,
+                     },
+        "DecisionTree": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
+                         "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
+                         "complexity": {ds_name: [] for ds_name in regression_dataset_namestry},
+                         "time_all": {ds_name: [] for ds_name in regression_dataset_namestry},
+                         "time_fit": {ds_name: [] for ds_name in regression_dataset_namestry},
+                         "sizes": {ds_name: [] for ds_name in regression_dataset_namestry},
+                         "tau": QUANTILE,
+                         },
+        "LinearQuantile": {"losses": {ds_name: [] for ds_name in regression_dataset_namestry},
+                           "coverage": {ds_name: [] for ds_name in regression_dataset_namestry},
+                           "complexity": {ds_name: [] for ds_name in regression_dataset_namestry},
+                           "time_all": {ds_name: [] for ds_name in regression_dataset_namestry},
+                           "time_fit": {ds_name: [] for ds_name in regression_dataset_namestry},
+                           "sizes": {ds_name: [] for ds_name in regression_dataset_namestry},
+                           "tau": QUANTILE,
+                           }
+}
+
+# Iterate over datasets
+for regression_dataset in regression_dataset_namestry:
+    try:
+        print(regression_dataset, QUANTILE)
+        X1, y = fetch_data(regression_dataset, return_X_y=True)
+        global_min, global_max = np.min(y), np.max(y)  # Global range for determ. normalization
+
+        X = create_dummy_variables(X1, get_categorical_features(X1))
+
+        kf = KFold(n_splits=N_SPLITS, shuffle=True, random_state=SEED)
+
+        fold_scores_sqr = {"losses": [], "coverage": [], "complexity": [], 'time_all': [], 'time_fit': []}
+        fold_scores_lgb = {"losses": [], "coverage": [], 'time_all': [], 'time_fit': []}
+        fold_scores_tree = {"losses": [], "coverage": [], "complexity": [], 'time_all': [], 'time_fit': []}
+        fold_scores_linear = {"losses": [], "coverage": [], "complexity": [], 'time_all': [], 'time_fit': []}
+
+        for train_index, test_index in kf.split(X):
+            train_X, test_X = X[train_index], X[test_index]
+            train_y, test_y = y[train_index], y[test_index]
+            
+            
+            study_sqr = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(seed=SEED))
+            params_sqr = {
+                "niterations": N_ITERS,  # improve for better results50
+                "binary_operators": binary_operators,
+                "unary_operators": unary_operators,
+                "complexity_of_operators": complexity_of_operators,
+                "elementwise_loss": f"QuantileLoss({QUANTILE})",
+                "deterministic": True,
+                "parallelism": "serial",
+                "temp_equation_file": True,
+                "parsimony": 0.0,
+                "random_state": SEED,
+            }
+            modelq = PySRRegressor(
+                **params_sqr
+            )
+            
+            t1 = time.time()
+            modelq.fit(train_X, train_y)
+            t2 = time.time()
+
+            y_pred_symbolic = modelq.predict(test_X)
+
+            # Metrics for SQR
+            fold_scores_sqr["losses"].append(normalized_pinball_loss(test_y, y_pred_symbolic, global_min, global_max, tau=QUANTILE))
+            fold_scores_sqr["coverage"].append(absolute_coverage_error(test_y, y_pred_symbolic, tau=QUANTILE))
+            fold_scores_sqr["complexity"].append(calculate_expression_complexity(modelq.sympy(), complexity_of_operators))
+            fold_scores_sqr['time_all'].append(t2-t1)
+            fold_scores_sqr['time_fit'].append(t2-t1)
+
+            # LightGBM Quantile Regression
+            t1 = time.time()
+            study_lgb = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(seed=SEED))
+        
+            study_lgb.optimize(lambda trial: objective_lgb(trial, train_X, train_y, test_X, test_y, tau=QUANTILE), n_trials=10)
+
+            best_params_lgb = study_lgb.best_params
+            model_lgb = lgb.LGBMRegressor(objective='quantile', alpha=QUANTILE, **best_params_lgb)
+            t2 = time.time()
+            model_lgb.fit(train_X, train_y)
+            t3 = time.time()
+            y_pred_lgb = model_lgb.predict(test_X)
+
+            # Metrics for LightGBM
+            fold_scores_lgb["losses"].append(normalized_pinball_loss(test_y, y_pred_lgb, global_min, global_max, tau=QUANTILE))
+            fold_scores_lgb["coverage"].append(absolute_coverage_error(test_y, y_pred_lgb, tau=QUANTILE))
+            fold_scores_lgb['time_all'].append(t3-t1)
+            fold_scores_lgb['time_fit'].append(t3-t2)
+
+            # Inside the main loop for dataset processing (NEW)
+            t1 = time.time()
+            study_tree = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(seed=SEED))
+            
+            study_tree.optimize(lambda trial: objective_tree(trial, train_X, train_y, test_X, test_y, tau=QUANTILE), n_trials=10)
+
+            best_params_tree = study_tree.best_params  # Get best hyperparameter
+
+            # Train the best Decision Tree model with optimized min_samples_leaf
+            model_tree = QuantileDecisionTreeRegressor(quantile=QUANTILE, min_samples_leaf=best_params_tree['min_samples_leaf'])
+            t2 = time.time()
+            model_tree.fit(train_X, train_y)
+            t3 = time.time()
+            y_pred_tree = model_tree.predict(test_X)
+
+            # Metrics for Decision Tree (NEW complexity calculation)
+            fold_scores_tree["losses"].append(normalized_pinball_loss(test_y, y_pred_tree, global_min, global_max, tau=QUANTILE))
+            fold_scores_tree["coverage"].append(absolute_coverage_error(test_y, y_pred_tree, tau=QUANTILE))
+            fold_scores_tree["complexity"].append(model_tree.tree.tree_.node_count)  # NEW: Store tree complexity
+            fold_scores_tree['time_all'].append(max(t3-t1, 0.0))
+            fold_scores_tree['time_fit'].append(max(t3-t2, 0.0))
+
+            # Linear Quantile Regression
+            t1 = time.time()
+            study_linear = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(seed=SEED))
+            
+            study_linear.optimize(lambda trial: objective_linear(trial, train_X, train_y, test_X, test_y, tau=QUANTILE), n_trials=10)
+
+            best_params_linear = study_linear.best_params
+            t2 = time.time()
+            model_linear = QuantReg(train_y, train_X).fit(q=QUANTILE, max_iter=best_params_linear['max_iter'])
+            t3 = time.time()
+            y_pred_linear = model_linear.predict(test_X)
+
+            # Metrics for Linear Quantile Regression
+            fold_scores_linear["losses"].append(normalized_pinball_loss(test_y, y_pred_linear, global_min, global_max, tau=QUANTILE))
+            fold_scores_linear["coverage"].append(absolute_coverage_error(test_y, y_pred_linear, tau=QUANTILE))
+            fold_scores_linear["complexity"].append(X.shape[1])
+            fold_scores_linear['time_all'].append(t3-t1)
+            fold_scores_linear['time_fit'].append(t3-t2)
+
+        process_fold_scores("SQR", regression_dataset, fold_scores_sqr, results50)
+        process_fold_scores("LightGBM", regression_dataset, fold_scores_lgb, results50)
+        process_fold_scores("DecisionTree", regression_dataset, fold_scores_tree, results50)
+        process_fold_scores("LinearQuantile", regression_dataset, fold_scores_linear, results50)
+    except Exception as e:
+        print(f"Error processing {regression_dataset}: {e}")
+
+# Display results50
+print(results70)
+
+with open(f"results70_{regression_dataset_namestry[0]}.json", 'w+') as f:
+    json.dump(results70, f)
 
 
 # In[ ]:

@@ -42,7 +42,7 @@ psutil==7.0.0
 ptyprocess==0.7.0
 pure_eval==0.2.3
 Pygments==2.19.1
-pysr==1.4.0
+pysr==1.5.8
 python-dateutil==2.9.0.post0
 pytz==2025.1
 PyYAML==6.0.2
