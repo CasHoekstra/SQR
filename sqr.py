@@ -370,6 +370,7 @@ for regression_dataset in regression_dataset_namestry:
                 "parsimony": 0.0,
                 "random_state": SEED,
                 "progress": False,
+                "batch_size": 5000,
                 "verbosity": 0,
             }
             modelq = PySRRegressor(
@@ -613,6 +614,7 @@ for regression_dataset in regression_dataset_namestry:
                 "parsimony": 0.0,
                 "random_state": SEED,
                 "progress": False,
+                "batch_size": 5000,
                 "verbosity": 0,
             }
             modelq = PySRRegressor(
@@ -795,6 +797,7 @@ for regression_dataset in regression_dataset_namestry:
                 "parsimony": 0.0,
                 "progress": False,
                 "verbosity": 0,
+                "batch_size": 5000,
                 "random_state": SEED,
             }
             modelq = PySRRegressor(
