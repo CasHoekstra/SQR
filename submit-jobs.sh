@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=sqr
-#SBATCH --time=24:00:00
+#SBATCH --time=72:00:00
 ##SBATCH --time=00:15:00
 ##SBATCH --begin=20:00
-#SBATCH --array=0-122
+#SBATCH --array=0-244
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=1
 #SBATCH --partition=defq
@@ -24,9 +24,19 @@ conda activate sqr-noversion
 # mkdir o`echo $$`
 # cd o`echo $$`
 
+
+# Set TAU and DS_ID based on SLURM_ARRAY_TASK_ID
+if [ "$SLURM_ARRAY_TASK_ID" -le 122 ]; then
+  TAU=0.5
+  DS_ID=$SLURM_ARRAY_TASK_ID
+else
+  TAU=0.9
+  DS_ID=$((SLURM_ARRAY_TASK_ID - 123))  # Map 123–244 to 0–121
+fi
+
 # Run the actual experiment.
-python ~/SQR/sqr.py $SLURM_ARRAY_TASK_ID
-mv *.json /var/scratch/fht800/sqr_results/
+python ~/SQR/sqr.py $DS_ID $TAU
+mv *.json /var/scratch/fht800/sqr_results2/
 #mv *.json /var/scratch/fht800/sqr_test_results/
 
 #jupyter nbconvert --execute ~/hierarchical-conformal-prediction/models/dbpedia14/dbpedia14.ipynb
