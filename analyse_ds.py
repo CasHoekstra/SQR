@@ -29,7 +29,7 @@ import argparse
 # # Use glob to find matching files
 # result_files = glob.glob(args.pattern)
 def filename_to_dsname(filename):
-    start = len('results_results50_')
+    start = len('results50_')
     stop = len(filename) - len('.json')
     return filename[start:stop]
 
