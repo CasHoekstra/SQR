@@ -134,7 +134,9 @@ def create_dummy_variables(X, categorical_features):
 
         return X_with_dummies
 
-
+def process_fold_scores(model_name, ds_name, fold_scores, resultsdict):
+    for metric, scores in fold_scores.items():
+        resultsdict[model_name][metric][ds_name].extend(scores)
 # In[21]:
 
 
@@ -335,13 +337,6 @@ if tau_argv is None:
                             "tau": QUANTILE,
                             }
     }
-
-    def process_fold_scores(model_name, ds_name, fold_scores, resultsdict):
-        for metric, scores in fold_scores.items():
-            resultsdict[model_name][metric][ds_name].extend(scores)
-
-
-
 
     # Iterate over datasets
     for regression_dataset in regression_dataset_namestry:
@@ -1304,5 +1299,5 @@ else: # tau_argv is not None
     # Display results50
     print(results)
 
-    with open(f"results{tau}_{regression_dataset_namestry[0]}.json", 'w+') as f:
+    with open(f"results{QUANTILE}_{regression_dataset_namestry[0]}.json", 'w+') as f:
         json.dump(results, f)
