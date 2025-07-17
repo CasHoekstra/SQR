@@ -76,7 +76,7 @@ dependencies:
       - ptyprocess==0.7.0
       - pure-eval==0.2.3
       - pygments==2.19.1
-      - pysr==1.5.1
+      - pysr==1.5.8
       - python-dateutil==2.9.0.post0
       - pytz==2025.1
       - pyyaml==6.0.2

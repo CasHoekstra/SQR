@@ -1,9 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=sqr
-#SBATCH --time=05:00:00
-##SBATCH --time=00:15:00
-#SBATCH --begin=20:00
-#SBATCH --array=0-122
+#SBATCH --time=48:00:00
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=1
 #SBATCH --partition=defq
@@ -25,7 +22,7 @@ conda activate sqr-noversion
 # cd o`echo $$`
 
 # Run the actual experiment.
-python ~/SQR/sqr.py $SLURM_ARRAY_TASK_ID
+python ~/SQR/sqr.py $RUN_ID
 mv *.json /var/scratch/fht800/sqr_results/
 #mv *.json /var/scratch/fht800/sqr_test_results/
 
