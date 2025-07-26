@@ -134,6 +134,11 @@ def create_dummy_variables(X, categorical_features):
         return X_with_dummies
 
 
+
+def process_fold_scores(model_name, ds_name, fold_scores, resultsdict):
+    for metric, scores in fold_scores.items():
+        resultsdict[model_name][metric][ds_name].extend(scores)
+
 # In[21]:
 
 
@@ -334,13 +339,6 @@ if tau_argv is None:
                             "tau": QUANTILE,
                             }
     }
-
-    def process_fold_scores(model_name, ds_name, fold_scores, resultsdict):
-        for metric, scores in fold_scores.items():
-            resultsdict[model_name][metric][ds_name].extend(scores)
-
-
-
 
     # Iterate over datasets
     for regression_dataset in regression_dataset_namestry:
