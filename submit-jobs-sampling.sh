@@ -35,8 +35,8 @@ else
 fi
 
 # Run the actual experiment.
-python ~/SQR/sqr.py $DS_ID $TAU 10000
-mv *.json /var/scratch/fht800/sqr_sampling_results/
+python ~/SQR/sqr_sampling.py $DS_ID $TAU 10000
+mv *.json /var/scratch/fht800/sqr_sampling_results10k/
 #mv *.json /var/scratch/fht800/sqr_test_results/
 
 #jupyter nbconvert --execute ~/hierarchical-conformal-prediction/models/dbpedia14/dbpedia14.ipynb

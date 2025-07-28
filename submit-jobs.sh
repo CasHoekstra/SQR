@@ -3,7 +3,7 @@
 #SBATCH --time=72:00:00
 ##SBATCH --time=00:15:00
 ##SBATCH --begin=20:00
-#SBATCH --array=0-244
+#SBATCH --array=0-122
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=1
 #SBATCH --partition=defq
@@ -30,7 +30,7 @@ if [ "$SLURM_ARRAY_TASK_ID" -le 122 ]; then
   TAU=0.5
   DS_ID=$SLURM_ARRAY_TASK_ID
 else
-  TAU=0.9
+  TAU=0.5
   DS_ID=$((SLURM_ARRAY_TASK_ID - 123))  # Map 123–244 to 0–121
 fi
 
