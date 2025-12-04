@@ -380,11 +380,19 @@ else:
                 mean_abs = np.mean(np.abs(shap_vals), axis=0)
                 top_feat_idx = int(np.argmax(mean_abs))
 
+                # OOD-criterium gebaseerd op train-fold
                 p90 = np.quantile(train_X[:, top_feat_idx], 0.90)
-                mask_ood = train_X[:, top_feat_idx] >= p90
 
-                X_train_id, y_train_id   = train_X[~mask_ood], train_y[~mask_ood]
-                X_train_ood, y_train_ood = train_X[ mask_ood], train_y[ mask_ood]
+                # Train: ID vs OOD (voor training)
+                mask_train_ood = train_X[:, top_feat_idx] > p90    # liever > dan >= i.v.m. edge cases
+                X_train_id, y_train_id   = train_X[~mask_train_ood], train_y[~mask_train_ood]
+                X_train_ood, y_train_ood = train_X[ mask_train_ood], train_y[ mask_train_ood]
+
+                # Test: ID vs OOD (voor evaluatie)
+                mask_test_ood = test_X[:, top_feat_idx] > p90
+                X_test_id,  y_test_id  = test_X[~mask_test_ood], test_y[~mask_test_ood]
+                X_test_ood, y_test_ood = test_X[ mask_test_ood], test_y[ mask_test_ood]
+                
 
                 # 10k sampling voor PySR binnen ID
                 sqr_sample_size = min(X_train_id.shape[0], sample_size)
@@ -412,15 +420,22 @@ else:
                 modelq = PySRRegressor(**params_sqr)
                 t1 = time.time(); modelq.fit(sqr_train_X, sqr_train_y); t2 = time.time()
                 y_pred_symbolic_test = modelq.predict(test_X)
-                fold_scores_sqr["losses"].append(normalized_pinball_loss(test_y, y_pred_symbolic_test, global_min, global_max, tau=QUANTILE))
-                fold_scores_sqr["coverage"].append(absolute_coverage_error(test_y, y_pred_symbolic_test, tau=QUANTILE))
-                fold_scores_sqr["complexity"].append(calculate_expression_complexity(modelq.sympy(), complexity_of_operators))
-                fold_scores_sqr['time_all'].append(t2-t1); fold_scores_sqr['time_fit'].append(t2-t1)
-                # OOD-evaluatie op train-OOD subset
-                if X_train_ood.shape[0] > 0:
-                    y_pred_symbolic_ood = modelq.predict(X_train_ood)
-                    fold_scores_sqr["ood_losses"].append(normalized_pinball_loss(y_train_ood, y_pred_symbolic_ood, global_min, global_max, tau=QUANTILE))
-                    fold_scores_sqr["ood_coverage"].append(absolute_coverage_error(y_train_ood, y_pred_symbolic_ood, tau=QUANTILE))
+                fold_scores_sqr["losses"].append(
+                    normalized_pinball_loss(test_y, y_pred_symbolic_test, global_min, global_max, tau=QUANTILE)
+                )
+                fold_scores_sqr["coverage"].append(
+                    absolute_coverage_error(test_y, y_pred_symbolic_test, tau=QUANTILE)
+                )
+
+                # OOD-evaluatie op test-OOD subset
+                if X_test_ood.shape[0] > 0:
+                    y_pred_symbolic_ood = modelq.predict(X_test_ood)
+                    fold_scores_sqr["ood_losses"].append(
+                        normalized_pinball_loss(y_test_ood, y_pred_symbolic_ood, global_min, global_max, tau=QUANTILE)
+                    )
+                    fold_scores_sqr["ood_coverage"].append(
+                        absolute_coverage_error(y_test_ood, y_pred_symbolic_ood, tau=QUANTILE)
+                    )
                 else:
                     fold_scores_sqr["ood_losses"].append(np.nan)
                     fold_scores_sqr["ood_coverage"].append(np.nan)
@@ -436,13 +451,18 @@ else:
                 fold_scores_lgb["losses"].append(normalized_pinball_loss(test_y, y_pred_lgb_test, global_min, global_max, tau=QUANTILE))
                 fold_scores_lgb["coverage"].append(absolute_coverage_error(test_y, y_pred_lgb_test, tau=QUANTILE))
                 fold_scores_lgb['time_all'].append(t3-t1); fold_scores_lgb['time_fit'].append(t3-t2)
-                if X_train_ood.shape[0] > 0:
-                    y_pred_lgb_ood = model_lgb.predict(X_train_ood)
-                    fold_scores_lgb["ood_losses"].append(normalized_pinball_loss(y_train_ood, y_pred_lgb_ood, global_min, global_max, tau=QUANTILE))
-                    fold_scores_lgb["ood_coverage"].append(absolute_coverage_error(y_train_ood, y_pred_lgb_ood, tau=QUANTILE))
+                if X_test_ood.shape[0] > 0:
+                    y_pred_lgb_ood = model_lgb.predict(X_test_ood)
+                    fold_scores_lgb["ood_losses"].append(
+                        normalized_pinball_loss(y_test_ood, y_pred_lgb_ood, global_min, global_max, tau=QUANTILE)
+                    )
+                    fold_scores_lgb["ood_coverage"].append(
+                        absolute_coverage_error(y_test_ood, y_pred_lgb_ood, tau=QUANTILE)
+                    )
                 else:
                     fold_scores_lgb["ood_losses"].append(np.nan)
                     fold_scores_lgb["ood_coverage"].append(np.nan)
+
 
                 # -------- Decision Tree ----------
                 t1 = time.time()
@@ -456,34 +476,56 @@ else:
                 fold_scores_tree["coverage"].append(absolute_coverage_error(test_y, y_pred_tree_test, tau=QUANTILE))
                 fold_scores_tree["complexity"].append(model_tree.tree.tree_.node_count)
                 fold_scores_tree['time_all'].append(max(t3-t1, 0.0)); fold_scores_tree['time_fit'].append(max(t3-t2, 0.0))
-                if X_train_ood.shape[0] > 0:
-                    y_pred_tree_ood = model_tree.predict(X_train_ood)
-                    fold_scores_tree["ood_losses"].append(normalized_pinball_loss(y_train_ood, y_pred_tree_ood, global_min, global_max, tau=QUANTILE))
-                    fold_scores_tree["ood_coverage"].append(absolute_coverage_error(y_train_ood, y_pred_tree_ood, tau=QUANTILE))
+                if X_test_ood.shape[0] > 0:
+                    y_pred_tree_ood = model_tree.predict(X_test_ood)
+                    fold_scores_tree["ood_losses"].append(
+                        normalized_pinball_loss(y_test_ood, y_pred_tree_ood, global_min, global_max, tau=QUANTILE)
+                    )
+                    fold_scores_tree["ood_coverage"].append(
+                        absolute_coverage_error(y_test_ood, y_pred_tree_ood, tau=QUANTILE)
+                    )
                 else:
                     fold_scores_tree["ood_losses"].append(np.nan)
                     fold_scores_tree["ood_coverage"].append(np.nan)
 
+
                 # -------- Linear Quantile Regression ----------
+# -------- Linear Quantile Regression ----------
                 t1 = time.time()
                 study_linear = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(seed=SEED))
-                study_linear.optimize(lambda trial: objective_linear(trial, X_train_id, y_train_id, test_X, test_y, tau=QUANTILE), n_trials=10)
+                study_linear.optimize(
+                    lambda trial: objective_linear(trial, X_train_id, y_train_id, test_X, test_y, tau=QUANTILE),
+                    n_trials=10
+                )
                 best_params_linear = study_linear.best_params
                 t2 = time.time()
                 model_linear = QuantReg(y_train_id, X_train_id).fit(q=QUANTILE, max_iter=best_params_linear['max_iter'])
                 t3 = time.time()
                 y_pred_linear_test = model_linear.predict(test_X)
-                fold_scores_linear["losses"].append(normalized_pinball_loss(test_y, y_pred_linear_test, global_min, global_max, tau=QUANTILE))
-                fold_scores_linear["coverage"].append(absolute_coverage_error(test_y, y_pred_linear_test, tau=QUANTILE))
+                fold_scores_linear["losses"].append(
+                    normalized_pinball_loss(test_y, y_pred_linear_test, global_min, global_max, tau=QUANTILE)
+                )
+                fold_scores_linear["coverage"].append(
+                    absolute_coverage_error(test_y, y_pred_linear_test, tau=QUANTILE)
+                )
                 fold_scores_linear["complexity"].append(X_train_id.shape[1])
-                fold_scores_linear['time_all'].append(t3-t1); fold_scores_linear['time_fit'].append(t3-t2)
-                if X_train_ood.shape[0] > 0:
-                    y_pred_linear_ood = model_linear.predict(X_train_ood)
-                    fold_scores_linear["ood_losses"].append(normalized_pinball_loss(y_train_ood, y_pred_linear_ood, global_min, global_max, tau=QUANTILE))
-                    fold_scores_linear["ood_coverage"].append(absolute_coverage_error(y_train_ood, y_pred_linear_ood, tau=QUANTILE))
+                fold_scores_linear['time_all'].append(t3 - t1)
+                fold_scores_linear['time_fit'].append(t3 - t2)
+
+                # OOD-evaluatie op test-OOD subset
+                if X_test_ood.shape[0] > 0:
+                    y_pred_linear_ood = model_linear.predict(X_test_ood)
+                    fold_scores_linear["ood_losses"].append(
+                        normalized_pinball_loss(y_test_ood, y_pred_linear_ood, global_min, global_max, tau=QUANTILE)
+                    )
+                    fold_scores_linear["ood_coverage"].append(
+                        absolute_coverage_error(y_test_ood, y_pred_linear_ood, tau=QUANTILE)
+                    )
                 else:
                     fold_scores_linear["ood_losses"].append(np.nan)
                     fold_scores_linear["ood_coverage"].append(np.nan)
+
+
 
             process_fold_scores("SQR", regression_dataset, fold_scores_sqr, results)
             process_fold_scores("LightGBM", regression_dataset, fold_scores_lgb, results)
